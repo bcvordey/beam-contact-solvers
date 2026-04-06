@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Beam–Obstacle Animations (DNC)</title>
+  <style>
+    :root {
+      --bg-top: #f9fbff;
+      --bg-mid: #eef4fb;
+      --bg-bottom: #e7edf6;
+      --text: #2e3a48;
+      --muted: #516173;
+      --main-title: #0f3d7a;
+      --card-title: #8a4b00;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      margin: 0;
+      height: 100dvh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(140% 120% at 15% 5%, var(--bg-top) 0%, var(--bg-mid) 58%, var(--bg-bottom) 100%);
+      color: var(--text);
+      overflow: hidden;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px 10px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.86);
+      border-bottom: 1px solid #c7d6e6;
+      backdrop-filter: blur(2px);
+    }
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .toolbar-btn,
+    .jump-btn {
+      border: 1px solid #b8c8dc;
+      background: #ffffff;
+      color: #1e3a5f;
+      border-radius: 8px;
+      padding: 3px 9px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .toolbar-btn:hover,
+    .jump-btn:hover {
+      background: #f1f6fd;
+    }
+    .toolbar-btn:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+    .jump-btn.active {
+      background: #dceaf9;
+      border-color: #8eaed2;
+    }
+    #page-indicator {
+      font-size: 12px;
+      font-weight: 600;
+      color: #26486d;
+      min-width: 72px;
+      text-align: center;
+    }
+    .page {
+      height: 100%;
+      display: none;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+    .page.active {
+      display: grid;
+    }
+    header {
+      padding: 8px 12px;
+      font-size: clamp(12px, 1.8vw, 16px);
+      font-weight: 600;
+      line-height: 1.2;
+      text-align: center;
+      color: var(--main-title);
+      position: relative;
+    }
+    .nav-btn {
+      position: absolute;
+      right: 12px;
+      top: 6px;
+      border: 1px solid #b8c8dc;
+      background: #ffffff;
+      color: #1e3a5f;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .nav-btn.nav-left {
+      left: 12px;
+      right: auto;
+    }
+    .nav-btn:hover {
+      background: #f1f6fd;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: 0.1px;
+      padding: 0.1px;
+      min-height: 0;
+    }
+    .card {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .title {
+      font-size: clamp(13px, 1.4vw, 15px);
+      margin: 0 0 0.1px 0;
+      color: var(--card-title);
+      line-height: 1.15;
+      min-height: 0;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .media {
+      flex: 1;
+      min-height: 0;
+      border-radius: 0;
+      background: transparent;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .time-badge {
+      position: absolute;
+      right: 4px;
+      bottom: 4px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(11, 24, 44, 0.72);
+      border: 1px solid rgba(189, 208, 232, 0.4);
+      color: #eef5ff;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      pointer-events: none;
+    }
+    #page-5 .time-badge {
+      display: none;
+    }
+    video, img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="prev-page" type="button">Prev</button>
+      <span id="page-indicator">Page 1 / 1</span>
+      <button class="toolbar-btn" id="next-page" type="button">Next</button>
+    </div>
+    <div class="toolbar-group" id="jump-buttons"></div>
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="toggle-play" type="button">Pause</button>
+      <button class="toolbar-btn" id="restart-gifs" type="button">Restart</button>
+      <button class="toolbar-btn" id="sync-gifs" type="button">Sync</button>
+    </div>
+  </div>
+
+  <section class="page active" id="page-1">
+    <header>Beam–Obstacle Animations (DNC Condition) (β = 0.1)</header>
+    <button class="nav-btn" data-go="2">Next ></button>
+
+    <div class="grid">
+      <div class="card">
+        <p class="title">1) κ=0.1</p>
+        <div class="media">
+          <video src="beam_dnc_anim__kappa-0p1_beta-0p1.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">2) κ=10</p>
+        <div class="media">
+          <video src="beam_dnc_anim__kappa-10_beta-0p1.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">3) κ=100</p>
+        <div class="media">
+          <video src="beam_dnc_anim__kappa-100_beta-0p1.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">4) κ=1000</p>
+        <div class="media">
+          <video src="beam_dnc_anim__kappa-1000_beta-0p1.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="page-2">
+    <header>Beam–Obstacle Animations (DNC Condition)</header>
+    <button class="nav-btn nav-left" data-go="1">Back &lt;</button>
+    <button class="nav-btn" data-go="3">Next ></button>
+
+    <div class="grid">
+      <div class="card">
+        <p class="title">1) κ=0.1 (β=1)</p>
+        <div class="media">
+          <video src="beam_dnc_anim__kappa-0p1_beta-1.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">2) κ=10 (β=1)</p>
+        <div class="media">
+          <video src="beam_dnc_anim__kappa-10_beta-1.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">3) κ=100 (f=-5)</p>
+        <div class="media">
+          <video src="beam_dnc_anim__kappa-100_beta-0p1f5.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">4) κ=1000 (f=-5)</p>
+        <div class="media">
+          <video src="beam_dnc_anim__kappa-1000_beta-0p1f5.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="page-3">
+    <header>Beam–Obstacle Animations (Two Boundary Obstacles with DNC Condition) (β = 1)</header>
+    <button class="nav-btn nav-left" data-go="2">Back &lt;</button>
+    <button class="nav-btn" data-go="4">Next ></button>
+
+    <div class="grid">
+      <div class="card">
+        <p class="title">1) κ=0.1</p>
+        <div class="media">
+          <video src="two-obs-kappa01.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">2) κ=10</p>
+        <div class="media">
+          <video src="two-obs-kappa10.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">3) κ=100</p>
+        <div class="media">
+          <video src="two-obs-kappa100.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">4) κ=1000</p>
+        <div class="media">
+          <video src="two-obs-kappa1000.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="page-4">
+    <header>Beam–Obstacle Animations (Two Boundary Obstacles with DNC Condition) (β = 5)</header>
+    <button class="nav-btn nav-left" data-go="3">Back &lt;</button>
+    <button class="nav-btn" data-go="5">Next ></button>
+
+    <div class="grid">
+      <div class="card">
+        <p class="title">1) κ=0.1</p>
+        <div class="media">
+          <video src="two-obs-dpd-01.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">2) κ=10</p>
+        <div class="media">
+          <video src="two-obs-dpd-10.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">3) κ=100</p>
+        <div class="media">
+          <video src="two-obs-dpd-100.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">4) κ=1000</p>
+        <div class="media">
+          <video src="two-obs-dpd-1000.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="page-5">
+    <header>Beam–Obstacle Animations (Distributed Obstacle Set) (β = 1)</header>
+    <button class="nav-btn nav-left" data-go="4">Back &lt;</button>
+
+    <div class="grid">
+      <div class="card">
+        <p class="title">1) κ=0.1</p>
+        <div class="media">
+          <video src="beam_dist_anim_k0p1_b1.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">2) κ=10</p>
+        <div class="media">
+          <video src="beam_dist_anim_k10_b1.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">3) κ=100</p>
+        <div class="media">
+          <video src="beam_dist_anim_k100_b1.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="title">4) κ=1000</p>
+        <div class="media">
+          <video src="beam_dist_anim_k1e+03_b1.mp4" muted loop playsinline preload="metadata"></video>
+        </div>
+      </div>
+    </div>
+  </section>
+  <script>
+    const pages = Array.from(document.querySelectorAll(".page"));
+    const navButtons = document.querySelectorAll(".nav-btn");
+    const pageCount = pages.length;
+
+    const prevPageButton = document.getElementById("prev-page");
+    const nextPageButton = document.getElementById("next-page");
+    const pageIndicator = document.getElementById("page-indicator");
+    const jumpButtonsContainer = document.getElementById("jump-buttons");
+    const togglePlayButton = document.getElementById("toggle-play");
+    const restartButton = document.getElementById("restart-gifs");
+    const syncButton = document.getElementById("sync-gifs");
+
+    let currentPage = 1;
+    let isPaused = false;
+    let overlayRafId = null;
+
+    function formatTime(seconds) {
+      if (!Number.isFinite(seconds)) return "t=0.00s";
+      return `t=${seconds.toFixed(2)}s`;
+    }
+
+    function ensureTimeBadges() {
+      document.querySelectorAll(".card").forEach((card) => {
+        const media = card.querySelector(".media");
+        const video = card.querySelector("video");
+        if (!media || !video) return;
+        let badge = media.querySelector(".time-badge");
+        if (!badge) {
+          badge = document.createElement("span");
+          badge.className = "time-badge";
+          media.appendChild(badge);
+        }
+        badge.textContent = formatTime(video.currentTime);
+      });
+    }
+
+    function updateActivePageTimeBadges() {
+      const activePage = getActivePage();
+      if (!activePage) return;
+      activePage.querySelectorAll(".card").forEach((card) => {
+        const video = card.querySelector("video");
+        const badge = card.querySelector(".time-badge");
+        if (!video || !badge) return;
+        badge.textContent = formatTime(video.currentTime);
+      });
+    }
+
+    function startTimeOverlayLoop() {
+      if (overlayRafId !== null) return;
+      const tick = () => {
+        updateActivePageTimeBadges();
+        overlayRafId = requestAnimationFrame(tick);
+      };
+      overlayRafId = requestAnimationFrame(tick);
+    }
+
+    function getPageVideos(pageElement) {
+      return Array.from(pageElement.querySelectorAll("video"));
+    }
+
+    function pausePageVideos(pageElement) {
+      const videos = getPageVideos(pageElement);
+      videos.forEach((video) => {
+        video.pause();
+        video.dataset.playState = "paused";
+      });
+    }
+
+    function playPageVideos(pageElement, options = {}) {
+      const videos = getPageVideos(pageElement);
+      const restart = options.restart === true;
+      const sync = options.sync === true;
+
+      videos.forEach((video) => {
+        if (restart && Number.isFinite(video.duration)) {
+          video.currentTime = 0;
+        } else if (restart) {
+          video.currentTime = 0;
+        }
+        video.dataset.playState = "playing";
+      });
+
+      if (sync) {
+        videos.forEach((video) => video.pause());
+        requestAnimationFrame(() => {
+          videos.forEach((video) => {
+            video.play().catch(() => {});
+          });
+        });
+      } else {
+        videos.forEach((video) => {
+          video.play().catch(() => {});
+        });
+      }
+    }
+
+    function normalizePageNumber(pageNumber) {
+      const parsed = Number.parseInt(pageNumber, 10);
+      if (!Number.isFinite(parsed)) return 1;
+      return Math.min(pageCount, Math.max(1, parsed));
+    }
+
+    function getPageFromUrl() {
+      const url = new URL(window.location.href);
+      const queryPage = url.searchParams.get("page");
+      if (queryPage) return normalizePageNumber(queryPage);
+
+      const hashValue = url.hash.replace(/^#\/?/, "");
+      const hashMatch = hashValue.match(/^page-?(\d+)$/i) || hashValue.match(/^(\d+)$/);
+      if (hashMatch) return normalizePageNumber(hashMatch[1]);
+
+      const pathMatch = url.pathname.match(/\/page(\d+)\/?$/i);
+      if (pathMatch) return normalizePageNumber(pathMatch[1]);
+
+      return 1;
+    }
+
+    function updateUrl(pageNumber, pushHistory) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("page", String(pageNumber));
+      url.hash = `page${pageNumber}`;
+      if (pushHistory) {
+        history.pushState({ page: pageNumber }, "", url);
+      } else {
+        history.replaceState({ page: pageNumber }, "", url);
+      }
+    }
+
+    function updateControls() {
+      pageIndicator.textContent = `Page ${currentPage} / ${pageCount}`;
+      prevPageButton.disabled = currentPage <= 1;
+      nextPageButton.disabled = currentPage >= pageCount;
+      togglePlayButton.textContent = isPaused ? "Play" : "Pause";
+      const jumpButtons = jumpButtonsContainer.querySelectorAll(".jump-btn");
+      jumpButtons.forEach((button) => {
+        button.classList.toggle("active", Number.parseInt(button.dataset.page, 10) === currentPage);
+      });
+    }
+
+    function showPage(pageNumber, options = {}) {
+      const pageToShow = normalizePageNumber(pageNumber);
+      currentPage = pageToShow;
+      let targetPage = null;
+      pages.forEach((page) => {
+        const isTarget = page.id === `page-${pageToShow}`;
+        page.classList.toggle("active", isTarget);
+        if (isTarget) targetPage = page;
+        if (!isTarget) {
+          pausePageVideos(page);
+        }
+      });
+      if (targetPage) {
+        if (options.updateUrl !== false) {
+          updateUrl(pageToShow, Boolean(options.pushHistory));
+        }
+        requestAnimationFrame(() => {
+          if (isPaused) {
+            pausePageVideos(targetPage);
+          } else if (options.sync === true) {
+            playPageVideos(targetPage, { restart: true, sync: true });
+          } else {
+            playPageVideos(targetPage, { restart: true });
+          }
+          updateActivePageTimeBadges();
+        });
+      }
+      updateControls();
+    }
+
+    function getActivePage() {
+      return document.querySelector(".page.active");
+    }
+
+    function togglePlayback() {
+      const activePage = getActivePage();
+      if (!activePage) return;
+      isPaused = !isPaused;
+      if (isPaused) {
+        pausePageVideos(activePage);
+      } else {
+        playPageVideos(activePage, { restart: false });
+      }
+      updateActivePageTimeBadges();
+      updateControls();
+    }
+
+    function restartActivePage() {
+      const activePage = getActivePage();
+      if (!activePage) return;
+      isPaused = false;
+      playPageVideos(activePage, { restart: true });
+      updateActivePageTimeBadges();
+      updateControls();
+    }
+
+    function syncActivePage() {
+      const activePage = getActivePage();
+      if (!activePage) return;
+      isPaused = false;
+      playPageVideos(activePage, { restart: true, sync: true });
+      updateActivePageTimeBadges();
+      updateControls();
+    }
+
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+      const jumpButton = document.createElement("button");
+      jumpButton.type = "button";
+      jumpButton.className = "jump-btn";
+      jumpButton.dataset.page = String(pageNumber);
+      jumpButton.textContent = String(pageNumber);
+      jumpButton.addEventListener("click", () => {
+        showPage(pageNumber, { updateUrl: true, pushHistory: true });
+      });
+      jumpButtonsContainer.appendChild(jumpButton);
+    }
+
+    navButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        showPage(button.dataset.go, { updateUrl: true, pushHistory: true });
+      });
+    });
+
+    prevPageButton.addEventListener("click", () => {
+      showPage(currentPage - 1, { updateUrl: true, pushHistory: true });
+    });
+
+    nextPageButton.addEventListener("click", () => {
+      showPage(currentPage + 1, { updateUrl: true, pushHistory: true });
+    });
+
+    togglePlayButton.addEventListener("click", togglePlayback);
+    restartButton.addEventListener("click", restartActivePage);
+    syncButton.addEventListener("click", syncActivePage);
+
+    document.addEventListener("keydown", (event) => {
+      const tagName = (event.target && event.target.tagName) || "";
+      if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") return;
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        showPage(currentPage + 1, { updateUrl: true, pushHistory: true });
+        return;
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        showPage(currentPage - 1, { updateUrl: true, pushHistory: true });
+        return;
+      }
+      if (event.key === "r" || event.key === "R") {
+        event.preventDefault();
+        restartActivePage();
+        return;
+      }
+      if (/^[1-9]$/.test(event.key)) {
+        const pageNumber = Number.parseInt(event.key, 10);
+        if (pageNumber <= pageCount) {
+          event.preventDefault();
+          showPage(pageNumber, { updateUrl: true, pushHistory: true });
+        }
+      }
+    });
+
+    window.addEventListener("popstate", () => {
+      showPage(getPageFromUrl(), { updateUrl: false });
+    });
+
+    window.addEventListener("hashchange", () => {
+      showPage(getPageFromUrl(), { updateUrl: false });
+    });
+
+    document.querySelectorAll("video").forEach((video) => {
+      video.dataset.playState = "playing";
+    });
+
+    ensureTimeBadges();
+    startTimeOverlayLoop();
+    showPage(getPageFromUrl(), { updateUrl: true, pushHistory: false });
+  </script>
+</body>
+</html>
