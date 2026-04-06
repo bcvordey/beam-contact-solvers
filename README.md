@@ -1,4 +1,4 @@
-# Dissertation MATLAB Solvers for Beam Contact Problems
+# Beam Contact Solvers
 
 This repository contains MATLAB solvers and analysis scripts for simulating beam contact problems, specifically focusing on Euler-Bernoulli beams with unilateral or bilateral contact constraints. These solvers implement various numerical methods (Finite Difference, Finite Element, FFT-based) to solve dynamic contact problems with obstacles.
 
